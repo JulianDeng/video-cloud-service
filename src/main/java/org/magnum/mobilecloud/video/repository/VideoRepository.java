@@ -10,4 +10,6 @@ public interface VideoRepository extends CrudRepository<Video, Long>{
 	public Collection<Video> findByName(String title);
 	
 	public Collection<Video> findByDurationLessThan(long duration);
+	
+	public Video findById(long id);
 }

@@ -20,12 +20,16 @@ package org.magnum.mobilecloud.video;
 
 import java.security.Principal;
 import java.util.Collection;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletResponse;
 
 import org.magnum.mobilecloud.video.client.VideoSvcApi;
 import org.magnum.mobilecloud.video.repository.Video;
 import org.magnum.mobilecloud.video.repository.VideoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -63,23 +67,81 @@ public class AnEmptyController {
 	}
 	
 	@RequestMapping(value=VideoSvcApi.VIDEO_SVC_PATH, method=RequestMethod.GET)
-	public @ResponseBody Collection<Video> getAllVideos(Principal p){
+	public @ResponseBody Collection<Video> getVideoList(){
 		return Lists.newArrayList(videos.findAll());
 	}
 	
 	@RequestMapping(value=VideoSvcApi.VIDEO_SVC_PATH, method=RequestMethod.POST)
-	public @ResponseBody Video addVideo(@RequestBody Video v, Principal p){
+	public @ResponseBody Video addVideo(@RequestBody Video v){
 		videos.save(v);
 		return v;
 	}
 	
 	@RequestMapping(value=VideoSvcApi.VIDEO_TITLE_SEARCH_PATH, method=RequestMethod.GET)
-	public @ResponseBody Collection<Video> findByTitle(@RequestParam(VideoSvcApi.TITLE_PARAMETER) String title, Principal p){
+	public @ResponseBody Collection<Video> findByTitle(@RequestParam(VideoSvcApi.TITLE_PARAMETER) String title){
 		return videos.findByName(title);
 	}
 	
 	@RequestMapping(value=VideoSvcApi.VIDEO_DURATION_SEARCH_PATH, method=RequestMethod.GET)
-	public @ResponseBody Collection<Video> findByDurationLessThan(@RequestParam(VideoSvcApi.DURATION_PARAMETER) long duration, Principal p){
+	public @ResponseBody Collection<Video> findByDurationLessThan(@RequestParam(VideoSvcApi.DURATION_PARAMETER) long duration){
 		return videos.findByDurationLessThan(duration);
+	}
+	
+	@RequestMapping(value=VideoSvcApi.VIDEO_SVC_PATH + "/{id}", method=RequestMethod.GET)
+	public @ResponseBody Video getVideoById(@PathVariable("id") long id, HttpServletResponse response){
+		Video v = videos.findById(id);
+		if(v == null){
+			response.setStatus(response.SC_NOT_FOUND);
+			return null;
+		}
+		return v; 
+	}
+	
+	@RequestMapping(value=VideoSvcApi.VIDEO_SVC_PATH + "/{id}/like", method=RequestMethod.POST)
+	public void likeVideo(@PathVariable("id") long id, HttpServletResponse response, Principal p){
+		Video v = videos.findById(id);
+		if(v == null){
+			response.setStatus(response.SC_NOT_FOUND);
+			return;
+		}
+		Set<String> likeList = v.getLikedBy();
+		String username = p.getName();
+		
+		if(likeList.contains(username)){
+			response.setStatus(response.SC_BAD_REQUEST);
+			return;
+		}
+		
+		likeList.add(username);
+		v.setLikedBy(likeList);
+		v.setLikes(v.getLikes() + 1);
+		videos.save(v);
+		response.setStatus(response.SC_OK);
+		
+		return;
+	}
+	
+	@RequestMapping(value=VideoSvcApi.VIDEO_SVC_PATH + "/{id}/unlike", method=RequestMethod.POST)
+	public void unlikeVideo(@PathVariable("id") long id, HttpServletResponse response, Principal p){
+		Video v = videos.findById(id);
+		if(v == null){
+			response.setStatus(response.SC_NOT_FOUND);
+			return;
+		}
+		Set<String> likeList = v.getLikedBy();
+		String username = p.getName();
+		
+		if(!likeList.contains(username)){
+			response.setStatus(response.SC_BAD_REQUEST);
+			return;
+		}
+		
+		likeList.remove(username);
+		v.setLikedBy(likeList);
+		v.setLikes(v.getLikes() - 1);
+		videos.save(v);
+		response.setStatus(response.SC_OK);
+		
+		return;
 	}
 }
