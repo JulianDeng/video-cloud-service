@@ -1,4 +1,4 @@
-# Mobile Cloud Video Spring Boot Service
+# Video cloud service - like and unlike
 
 ## Overview
 Spring Data Rest, JPA, OAuth, Gradle, etc.
